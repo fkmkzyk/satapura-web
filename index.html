@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>サタプラ検索</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="サタプラ検索">
+  <meta name="theme-color" content="#ff6b00">
+  <!-- iOSは不透明PNG・180x180を推奨。アイコン差し替え時は ?v= を上げて端末キャッシュを回避 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      --primary: #ff6b00;
+      --primary-light: #fff3e6;
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding-bottom: 40px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    header {
+      background: linear-gradient(135deg, #ff6b00, #ff9500);
+      color: #fff;
+      padding: 14px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .header-inner {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    header h1 img {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+    }
+    .stats-badge {
+      font-size: 12px;
+      background: rgba(255,255,255,0.22);
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 12px 14px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      background: #e5e7eb;
+      padding: 4px;
+      border-radius: 10px;
+    }
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .search-box {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      margin-bottom: 12px;
+    }
+    .search-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-input {
+      width: 100%;
+      padding: 11px 38px 11px 14px;
+      font-size: 16px;
+      border: 2px solid var(--border);
+      border-radius: 9px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+    .clear-btn {
+      position: absolute;
+      right: 10px;
+      background: #e5e7eb;
+      border: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 13px;
+      cursor: pointer;
+      display: none;
+    }
+    .filter-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .chip {
+      font-size: 12px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .chip.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .ranking-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border-left: 4px solid var(--primary);
+    }
+    .ranking-card.satademy {
+      border-left-color: #eab308;
+      background: #fffdf7;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .card-date {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      background: #f3f4f6;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .card-criteria {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .item-list {
+      list-style: none;
+    }
+    .item-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 5px 0;
+      border-top: 1px solid #f3f4f6;
+      font-size: 14px;
+    }
+    .rank-badge {
+      font-weight: 700;
+      min-width: 38px;
+    }
+    .rank-1 { color: #d97706; }
+    .item-brand {
+      color: #4b5563;
+      font-size: 13px;
+    }
+    .item-name {
+      font-weight: 600;
+      color: #111827;
+    }
+    .item-price {
+      color: #059669;
+      font-size: 12px;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    .chat-box {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-messages {
+      max-height: 55vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px;
+    }
+    .msg {
+      padding: 10px 13px;
+      border-radius: 12px;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-width: 92%;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: #f3f4f6;
+      color: var(--text);
+      border-bottom-left-radius: 3px;
+    }
+    .msg-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .chat-send-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      padding: 0 18px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chat-send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1><img src="icon.png" alt="">サタプラ高速検索＆AIチャット</h1>
+      <span id="statsBadge" class="stats-badge">読込中...</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <button id="tabSearch" class="tab-btn active" onclick="switchTab('search')">⚡ 0秒リアルタイム検索</button>
+      <button id="tabChat" class="tab-btn" onclick="switchTab('chat')">💬 AIチャット質問 (1〜3秒)</button>
+    </div>
+
+    <!-- タブ1: 0秒リアルタイム検索 -->
+    <div id="viewSearch">
+      <div class="search-box">
+        <div class="search-input-wrap">
+          <input id="instantInput" type="text" class="search-input" placeholder="テーマ・商品名・メーカーを入力（例: カレー、無印良品、冷凍パスタ）" oninput="onInstantFilter()">
+          <button id="clearBtn" class="clear-btn" onclick="clearSearch()">✕</button>
+        </div>
+        <div class="filter-chips">
+          <button class="chip active" onclick="setFilterMode('all', this)">すべて表示</button>
+          <button class="chip" onclick="setFilterMode('rank1', this)">🥇 1位のみ</button>
+          <button class="chip" onclick="setFilterMode('satademy', this)">🏆 サタデミー賞</button>
+          <button class="chip" onclick="quickKeyword('無印良品')">無印良品</button>
+          <button class="chip" onclick="quickKeyword('カルディ')">カルディ</button>
+          <button class="chip" onclick="quickKeyword('カレー')">カレー</button>
+          <button class="chip" onclick="quickKeyword('パスタ')">パスタ</button>
+        </div>
+      </div>
+      <div id="resultsList"></div>
+    </div>
+
+    <!-- タブ2: 高速AIチャット -->
+    <div id="viewChat" style="display:none;">
+      <div class="chat-box">
+        <div class="filter-chips" style="margin-top:0;">
+          <button class="chip" onclick="sendQuickChat('最新')">📢 最新ランキング</button>
+          <button class="chip" onclick="sendQuickChat('無印良品で1位になった商品を全部教えて')">🥇 無印良品の1位まとめ</button>
+          <button class="chip" onclick="sendQuickChat('カルディでランクインした商品は？')">☕ カルディの商品一覧</button>
+          <button class="chip" onclick="sendQuickChat('300円以下で買える1位の商品を教えて')">💰 300円以下の1位</button>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+          <div class="msg bot">こんにちは！サタプラ「ひたすら試してランキング」の高速アシスタントです。
+キーワードなら約0.5秒、AI質問でも1〜3秒で即答します。気になる商品名やテーマを入力してください！</div>
+        </div>
+        <div class="chat-input-row">
+          <input id="chatInput" type="text" class="search-input" placeholder="質問を入力（例: コスパが良いパスタソースは？）" onkeydown="if(event.key==='Enter') sendChat()">
+          <button id="chatSendBtn" class="chat-send-btn" onclick="sendChat()">送信</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw4FFd00-qXbsI4i09UkOUJGjXaw3bFwGK2u2hyRgBRruu14AKXRWEK5yaHUwgtyzjH_Q/exec';
+    var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v1';
+    var allRankings = [];
+    var currentFilterMode = 'all';
+
+    window.onload = function() {
+      // 1. まずブラウザの localStorage キャッシュがあれば0.01秒で即座に表示
+      try {
+        var cached = localStorage.getItem(LOCAL_CACHE_KEY);
+        if (cached) {
+          var parsed = JSON.parse(cached);
+          if (parsed && parsed.rankings && parsed.rankings.length > 0) {
+            allRankings = parsed.rankings;
+            document.getElementById('statsBadge').textContent = '全 ' + allRankings.length + ' 回分 (即表示)';
+            renderInstantResults();
+          }
+        }
+      } catch (e) {}
+
+      // 2. バックグラウンドでGASから最新データを取得して更新
+      fetch(GAS_API_URL + '?api=rankings')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data && data.rankings) {
+            allRankings = data.rankings;
+            document.getElementById('statsBadge').textContent = '全 ' + allRankings.length + ' 回分';
+            renderInstantResults();
+            try {
+              localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(data));
+            } catch (e) {}
+          }
+        })
+        .catch(function(err) {
+          if (allRankings.length === 0) {
+            document.getElementById('statsBadge').textContent = '読込エラー';
+            document.getElementById('resultsList').innerHTML = '<p style="padding:12px;color:#dc2626;">データ取得に失敗しました: ' + err.message + '</p>';
+          }
+        });
+    };
+
+    function switchTab(tab) {
+      var isSearch = (tab === 'search');
+      document.getElementById('tabSearch').className = 'tab-btn' + (isSearch ? ' active' : '');
+      document.getElementById('tabChat').className = 'tab-btn' + (!isSearch ? ' active' : '');
+      document.getElementById('viewSearch').style.display = isSearch ? 'block' : 'none';
+      document.getElementById('viewChat').style.display = !isSearch ? 'block' : 'none';
+    }
+
+    function setFilterMode(mode, btn) {
+      currentFilterMode = mode;
+      var chips = btn.parentElement.querySelectorAll('.chip');
+      for (var i = 0; i < 3; i++) {
+        chips[i].classList.remove('active');
+      }
+      btn.classList.add('active');
+      renderInstantResults();
+    }
+
+    function quickKeyword(kw) {
+      var input = document.getElementById('instantInput');
+      input.value = kw;
+      onInstantFilter();
+    }
+
+    function clearSearch() {
+      var input = document.getElementById('instantInput');
+      input.value = '';
+      onInstantFilter();
+      input.focus();
+    }
+
+    function onInstantFilter() {
+      var val = document.getElementById('instantInput').value;
+      document.getElementById('clearBtn').style.display = val ? 'block' : 'none';
+      renderInstantResults();
+    }
+
+    function normalizeClient(s) {
+      return String(s || '').toLowerCase().replace(/[\s\u3000]/g, '');
+    }
+
+    function renderInstantResults() {
+      var kw = normalizeClient(document.getElementById('instantInput').value);
+      var container = document.getElementById('resultsList');
+
+      var filtered = allRankings.filter(function(r) {
+        if (currentFilterMode === 'satademy' && !r.isSatademy) return false;
+        if (!kw) return true;
+        var hay = normalizeClient(r.date + ' ' + r.theme + ' ' + r.criteria + ' ' +
+          r.items.map(function(i) { return i.brand + ' ' + i.name + ' ' + i.price; }).join(' '));
+        return hay.indexOf(kw) !== -1;
+      });
+
+      var limit = kw ? 100 : 30;
+      var slice = filtered.slice(0, limit);
+
+      if (slice.length === 0) {
+        container.innerHTML = '<div class="ranking-card">一致するランキングが見つかりませんでした。AIチャットタブで質問してみてください。</div>';
+        return;
+      }
+
+      var emojis = { 1: '🥇', 2: '🥈', 3: '🥉', 4: '4️⃣', 5: '5️⃣' };
+      var html = slice.map(function(r) {
+        var items = r.items.filter(function(it) {
+          return currentFilterMode === 'rank1' ? it.rank === 1 : true;
+        });
+
+        var itemsHtml = items.map(function(it) {
+          return '<li class="item-row">' +
+            '<span class="rank-badge ' + (it.rank === 1 ? 'rank-1' : '') + '">' + (emojis[it.rank] || it.rank + '位') + '</span>' +
+            '<span><span class="item-brand">' + escapeHtml(it.brand) + '</span> / <span class="item-name">' + escapeHtml(it.name) + '</span> ' +
+            '<small style="color:#6b7280">' + escapeHtml(it.changeNote || '') + '</small></span>' +
+            '<span class="item-price">' + escapeHtml(it.price || '') + '</span>' +
+            '</li>';
+        }).join('');
+
+        var criteriaHtml = (r.criteria && r.criteria.indexOf('自動抽出失敗') === -1)
+          ? '<div class="card-criteria">📝 ' + escapeHtml(r.criteria) + '</div>' : '';
+
+        return '<div class="ranking-card ' + (r.isSatademy ? 'satademy' : '') + '">' +
+          '<div class="card-header">' +
+          '<div class="card-title">' + (r.isSatademy ? '🏆 ' : '') + escapeHtml(r.theme) + '</div>' +
+          '<div class="card-date">' + escapeHtml(r.date) + '</div>' +
+          '</div>' +
+          criteriaHtml +
+          '<ul class="item-list">' + itemsHtml + '</ul>' +
+          '</div>';
+      }).join('');
+
+      if (filtered.length > limit) {
+        html += '<div style="text-align:center;color:#6b7280;font-size:13px;padding:8px;">他 ' + (filtered.length - limit) + ' 件（キーワードを入力すると全件から絞り込めます）</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    function sendQuickChat(text) {
+      document.getElementById('chatInput').value = text;
+      sendChat();
+    }
+
+    function sendChat() {
+      var input = document.getElementById('chatInput');
+      var btn = document.getElementById('chatSendBtn');
+      var text = input.value.trim();
+      if (!text || btn.disabled) return;
+
+      appendMessage(text, 'user');
+      input.value = '';
+      btn.disabled = true;
+
+      var loadingEl = appendMessage('⚡ 検索・回答中...', 'bot');
+
+      fetch(GAS_API_URL + '?q=' + encodeURIComponent(text))
+        .then(function(res) { return res.json(); })
+        .then(function(res) {
+          btn.disabled = false;
+          var sec = ((res.elapsedMs || 0) / 1000).toFixed(2);
+          var modeLabel = res.mode === 'direct' ? 'ダイレクト即答' : (res.mode === 'ai' ? 'Gemini高速AI' : '即答');
+          loadingEl.innerHTML = escapeHtml(res.answer) +
+            '<div class="msg-meta">⚡ ' + sec + '秒 (' + modeLabel + ')</div>';
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          loadingEl.textContent = 'エラーが発生しました: ' + err.message;
+        });
+    }
+
+    function appendMessage(text, role) {
+      var box = document.getElementById('chatMessages');
+      var div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+      return div;
+    }
+
+    function escapeHtml(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
