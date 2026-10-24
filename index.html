@@ -387,18 +387,33 @@
   </div>
 
   <script>
-    var APP_VERSION = '2026-10-24-v2';
+    var APP_VERSION = '2026-10-24-v3';
     var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw4FFd00-qXbsI4i09UkOUJGjXaw3bFwGK2u2hyRgBRruu14AKXRWEK5yaHUwgtyzjH_Q/exec';
-    var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v2';
+    var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v3';
     var allRankings = [];
     var currentFilterMode = 'all';
+
+    function markLiveMbsRankings(rankings) {
+      var mbsCount = 0;
+      (rankings || []).forEach(function(r) {
+        if (isMbsRankingUrl(r.url)) {
+          mbsCount++;
+          if (typeof r.isMbsLive !== 'boolean') {
+            r.isMbsLive = (mbsCount <= 12);
+          }
+        } else {
+          r.isMbsLive = false;
+        }
+      });
+      return rankings;
+    }
 
     function fetchLatestRankings() {
       fetch(GAS_API_URL + '?api=rankings&_t=' + Date.now())
         .then(function(res) { return res.json(); })
         .then(function(data) {
           if (data && data.rankings) {
-            allRankings = data.rankings;
+            allRankings = markLiveMbsRankings(data.rankings);
             document.getElementById('statsBadge').textContent = '全 ' + allRankings.length + ' 回分';
             renderInstantResults();
             try {
@@ -434,13 +449,13 @@
     }
 
     window.onload = function() {
-      // 1. まずブラウザの localStorage キャッシュ（v2 または旧 v1）があれば0.01秒で即座に表示
+      // 1. まずブラウザの localStorage キャッシュ（v3 / v2 / v1）があれば0.01秒で即座に表示
       try {
-        var cached = localStorage.getItem(LOCAL_CACHE_KEY) || localStorage.getItem('satapura_rankings_cache_v1');
+        var cached = localStorage.getItem(LOCAL_CACHE_KEY) || localStorage.getItem('satapura_rankings_cache_v2') || localStorage.getItem('satapura_rankings_cache_v1');
         if (cached) {
           var parsed = JSON.parse(cached);
           if (parsed && parsed.rankings && parsed.rankings.length > 0) {
-            allRankings = parsed.rankings;
+            allRankings = markLiveMbsRankings(parsed.rankings);
             document.getElementById('statsBadge').textContent = '全 ' + allRankings.length + ' 回分 (即表示)';
             renderInstantResults();
           }
@@ -554,7 +569,7 @@
         var criteriaHtml = (r.criteria && r.criteria.indexOf('自動抽出失敗') === -1)
           ? '<div class="card-criteria">📝 ' + escapeHtml(r.criteria) + '</div>' : '';
 
-        var dateHtml = isMbsRankingUrl(r.url)
+        var dateHtml = (r.isMbsLive && isMbsRankingUrl(r.url))
           ? '<a class="card-date card-date-link" href="' + escapeHtml(String(r.url).trim()) + '" target="_blank" rel="noopener noreferrer" title="MBS公式ランキングページを開く">' + escapeHtml(r.date) + '</a>'
           : '<div class="card-date">' + escapeHtml(r.date) + '</div>';
 
