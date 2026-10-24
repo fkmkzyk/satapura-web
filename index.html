@@ -387,7 +387,7 @@
   </div>
 
   <script>
-    var APP_VERSION = '2026-10-24-v3';
+    var APP_VERSION = '2026-10-24-v4';
     var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw4FFd00-qXbsI4i09UkOUJGjXaw3bFwGK2u2hyRgBRruu14AKXRWEK5yaHUwgtyzjH_Q/exec';
     var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v3';
     var allRankings = [];
@@ -521,9 +521,6 @@
     }
 
     function getProductLinkUrl(it) {
-      if (it && it.productUrl && /^https?:\/\//i.test(String(it.productUrl).trim())) {
-        return String(it.productUrl).trim();
-      }
       var brandPart = (it && it.brand && it.brand !== '不明') ? it.brand + ' ' : '';
       var query = (brandPart + (it && it.name ? it.name : '')).trim();
       return 'https://www.google.com/search?q=' + encodeURIComponent(query);
