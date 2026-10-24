@@ -394,7 +394,7 @@
     var currentFilterMode = 'all';
 
     function fetchLatestRankings() {
-      fetch(GAS_API_URL + '?api=rankings&_t=' + Date.now(), { cache: 'no-store' })
+      fetch(GAS_API_URL + '?api=rankings&_t=' + Date.now())
         .then(function(res) { return res.json(); })
         .then(function(data) {
           if (data && data.rankings) {
@@ -430,16 +430,13 @@
 
     function forceReloadApp() {
       document.getElementById('statsBadge').textContent = '更新中...';
-      try {
-        localStorage.removeItem(LOCAL_CACHE_KEY);
-      } catch (e) {}
       location.replace(location.pathname + '?_t=' + Date.now());
     }
 
     window.onload = function() {
-      // 1. まずブラウザの localStorage キャッシュがあれば0.01秒で即座に表示
+      // 1. まずブラウザの localStorage キャッシュ（v2 または旧 v1）があれば0.01秒で即座に表示
       try {
-        var cached = localStorage.getItem(LOCAL_CACHE_KEY);
+        var cached = localStorage.getItem(LOCAL_CACHE_KEY) || localStorage.getItem('satapura_rankings_cache_v1');
         if (cached) {
           var parsed = JSON.parse(cached);
           if (parsed && parsed.rankings && parsed.rankings.length > 0) {
