@@ -183,6 +183,18 @@
       padding: 2px 8px;
       border-radius: 6px;
     }
+    .card-date-link {
+      text-decoration: none;
+      color: var(--primary);
+      background: var(--primary-light);
+      border: 1px solid #fed7aa;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .card-date-link:hover, .card-date-link:active {
+      background: #ffedd5;
+      text-decoration: underline;
+    }
     .card-criteria {
       font-size: 12px;
       color: var(--muted);
@@ -211,6 +223,17 @@
     .item-name {
       font-weight: 600;
       color: #111827;
+    }
+    .item-name-link {
+      color: #111827;
+      text-decoration: underline;
+      text-decoration-color: #d1d5db;
+      text-underline-offset: 3px;
+      transition: color 0.15s, text-decoration-color 0.15s;
+    }
+    .item-name-link:hover, .item-name-link:active {
+      color: var(--primary);
+      text-decoration-color: var(--primary);
     }
     .item-price {
       color: #059669;
@@ -338,7 +361,7 @@
 
   <script>
     var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw4FFd00-qXbsI4i09UkOUJGjXaw3bFwGK2u2hyRgBRruu14AKXRWEK5yaHUwgtyzjH_Q/exec';
-    var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v1';
+    var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v2';
     var allRankings = [];
     var currentFilterMode = 'all';
 
@@ -418,6 +441,19 @@
       return String(s || '').toLowerCase().replace(/[\s\u3000]/g, '');
     }
 
+    function isMbsRankingUrl(url) {
+      return /^https?:\/\/(?:www\.)?mbs\.jp\//i.test(String(url || '').trim());
+    }
+
+    function getProductLinkUrl(it) {
+      if (it && it.productUrl && /^https?:\/\//i.test(String(it.productUrl).trim())) {
+        return String(it.productUrl).trim();
+      }
+      var brandPart = (it && it.brand && it.brand !== '不明') ? it.brand + ' ' : '';
+      var query = (brandPart + (it && it.name ? it.name : '')).trim();
+      return 'https://www.google.com/search?q=' + encodeURIComponent(query);
+    }
+
     function renderInstantResults() {
       var kw = normalizeClient(document.getElementById('instantInput').value);
       var container = document.getElementById('resultsList');
@@ -445,9 +481,11 @@
         });
 
         var itemsHtml = items.map(function(it) {
+          var productUrl = getProductLinkUrl(it);
+          var nameHtml = '<a class="item-name item-name-link" href="' + escapeHtml(productUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(it.name) + '</a>';
           return '<li class="item-row">' +
             '<span class="rank-badge ' + (it.rank === 1 ? 'rank-1' : '') + '">' + (emojis[it.rank] || it.rank + '位') + '</span>' +
-            '<span><span class="item-brand">' + escapeHtml(it.brand) + '</span> / <span class="item-name">' + escapeHtml(it.name) + '</span> ' +
+            '<span><span class="item-brand">' + escapeHtml(it.brand) + '</span> / ' + nameHtml + ' ' +
             '<small style="color:#6b7280">' + escapeHtml(it.changeNote || '') + '</small></span>' +
             '<span class="item-price">' + escapeHtml(it.price || '') + '</span>' +
             '</li>';
@@ -456,10 +494,14 @@
         var criteriaHtml = (r.criteria && r.criteria.indexOf('自動抽出失敗') === -1)
           ? '<div class="card-criteria">📝 ' + escapeHtml(r.criteria) + '</div>' : '';
 
+        var dateHtml = isMbsRankingUrl(r.url)
+          ? '<a class="card-date card-date-link" href="' + escapeHtml(String(r.url).trim()) + '" target="_blank" rel="noopener noreferrer" title="MBS公式ランキングページを開く">' + escapeHtml(r.date) + '</a>'
+          : '<div class="card-date">' + escapeHtml(r.date) + '</div>';
+
         return '<div class="ranking-card ' + (r.isSatademy ? 'satademy' : '') + '">' +
           '<div class="card-header">' +
           '<div class="card-title">' + (r.isSatademy ? '🏆 ' : '') + escapeHtml(r.theme) + '</div>' +
-          '<div class="card-date">' + escapeHtml(r.date) + '</div>' +
+          dateHtml +
           '</div>' +
           criteriaHtml +
           '<ul class="item-list">' + itemsHtml + '</ul>' +
