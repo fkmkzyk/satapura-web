@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>サタプラ検索</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -59,11 +62,32 @@
       height: 24px;
       border-radius: 6px;
     }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     .stats-badge {
       font-size: 12px;
       background: rgba(255,255,255,0.22);
       padding: 3px 10px;
       border-radius: 999px;
+    }
+    .reload-btn {
+      background: rgba(255,255,255,0.22);
+      color: #fff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .reload-btn:active {
+      background: rgba(255,255,255,0.38);
     }
     .container {
       max-width: 760px;
@@ -308,7 +332,10 @@
   <header>
     <div class="header-inner">
       <h1><img src="icon.png" alt="">サタプラ高速検索＆AIチャット</h1>
-      <span id="statsBadge" class="stats-badge">読込中...</span>
+      <div class="header-actions">
+        <span id="statsBadge" class="stats-badge">読込中...</span>
+        <button class="reload-btn" onclick="forceReloadApp()" title="最新状態に更新" aria-label="最新状態に更新">🔄</button>
+      </div>
     </div>
   </header>
 
@@ -360,27 +387,14 @@
   </div>
 
   <script>
+    var APP_VERSION = '2026-10-24-v2';
     var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw4FFd00-qXbsI4i09UkOUJGjXaw3bFwGK2u2hyRgBRruu14AKXRWEK5yaHUwgtyzjH_Q/exec';
     var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v2';
     var allRankings = [];
     var currentFilterMode = 'all';
 
-    window.onload = function() {
-      // 1. まずブラウザの localStorage キャッシュがあれば0.01秒で即座に表示
-      try {
-        var cached = localStorage.getItem(LOCAL_CACHE_KEY);
-        if (cached) {
-          var parsed = JSON.parse(cached);
-          if (parsed && parsed.rankings && parsed.rankings.length > 0) {
-            allRankings = parsed.rankings;
-            document.getElementById('statsBadge').textContent = '全 ' + allRankings.length + ' 回分 (即表示)';
-            renderInstantResults();
-          }
-        }
-      } catch (e) {}
-
-      // 2. バックグラウンドでGASから最新データを取得して更新
-      fetch(GAS_API_URL + '?api=rankings')
+    function fetchLatestRankings() {
+      fetch(GAS_API_URL + '?api=rankings&_t=' + Date.now(), { cache: 'no-store' })
         .then(function(res) { return res.json(); })
         .then(function(data) {
           if (data && data.rankings) {
@@ -398,7 +412,56 @@
             document.getElementById('resultsList').innerHTML = '<p style="padding:12px;color:#dc2626;">データ取得に失敗しました: ' + err.message + '</p>';
           }
         });
+    }
+
+    // ホーム画面アプリ（PWA）起動時・復帰時に最新のHTMLが公開されていないか確認し、新しければ自動リロードする
+    function checkAppUpdate() {
+      var checkUrl = location.pathname + '?_check=' + Date.now();
+      fetch(checkUrl, { cache: 'no-store' })
+        .then(function(res) { return res.text(); })
+        .then(function(html) {
+          var m = html.match(/var\s+APP_VERSION\s*=\s*'([^']+)'/);
+          if (m && m[1] && m[1] !== APP_VERSION) {
+            location.replace(location.pathname + '?_v=' + encodeURIComponent(m[1]) + '&_t=' + Date.now());
+          }
+        })
+        .catch(function() {});
+    }
+
+    function forceReloadApp() {
+      document.getElementById('statsBadge').textContent = '更新中...';
+      try {
+        localStorage.removeItem(LOCAL_CACHE_KEY);
+      } catch (e) {}
+      location.replace(location.pathname + '?_t=' + Date.now());
+    }
+
+    window.onload = function() {
+      // 1. まずブラウザの localStorage キャッシュがあれば0.01秒で即座に表示
+      try {
+        var cached = localStorage.getItem(LOCAL_CACHE_KEY);
+        if (cached) {
+          var parsed = JSON.parse(cached);
+          if (parsed && parsed.rankings && parsed.rankings.length > 0) {
+            allRankings = parsed.rankings;
+            document.getElementById('statsBadge').textContent = '全 ' + allRankings.length + ' 回分 (即表示)';
+            renderInstantResults();
+          }
+        }
+      } catch (e) {}
+
+      // 2. バックグラウンドでアプリHTMLの更新確認＆GASから最新データを取得
+      checkAppUpdate();
+      fetchLatestRankings();
     };
+
+    // ホーム画面アプリをバックグラウンドから開き直したときにも自動で更新チェックを行う
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        checkAppUpdate();
+        fetchLatestRankings();
+      }
+    });
 
     function switchTab(tab) {
       var isSearch = (tab === 'search');
