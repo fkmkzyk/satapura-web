@@ -124,32 +124,6 @@
       margin: 0 auto;
       padding: 12px 14px;
     }
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-      background: #e5e7eb;
-      padding: 4px;
-      border-radius: 10px;
-    }
-    .tab-btn {
-      flex: 1;
-      border: none;
-      background: transparent;
-      padding: 9px 12px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--muted);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-    .tab-btn.active {
-      background: #fff;
-      color: var(--primary);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
     .search-box {
       background: var(--card);
       border-radius: 12px;
@@ -331,73 +305,12 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    .chat-box {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 14px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .chat-messages {
-      max-height: 55vh;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding: 4px;
-    }
-    .msg {
-      padding: 10px 13px;
-      border-radius: 12px;
-      font-size: 14px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-width: 92%;
-    }
-    .msg.user {
-      align-self: flex-end;
-      background: var(--primary);
-      color: #fff;
-      border-bottom-right-radius: 3px;
-    }
-    .msg.bot {
-      align-self: flex-start;
-      background: #f3f4f6;
-      color: var(--text);
-      border-bottom-left-radius: 3px;
-    }
-    .msg-meta {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-    .chat-input-row {
-      display: flex;
-      gap: 8px;
-    }
-    .chat-send-btn {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 9px;
-      padding: 0 18px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .chat-send-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
   </style>
 </head>
 <body>
   <header>
     <div class="header-inner">
-      <h1><img src="icon.png" alt=""><span class="title-text"><span class="title-main">サタプラ検索</span><span class="title-sub">ランキング検索＆AIチャット</span></span></h1>
+      <h1><img src="icon.png" alt=""><span class="title-text"><span class="title-main">サタプラ検索</span><span class="title-sub">ランキング検索</span></span></h1>
       <div class="header-actions">
         <span id="statsBadge" class="stats-badge">読込中...</span>
         <button class="reload-btn" onclick="forceReloadApp()" title="最新状態に更新" aria-label="最新状態に更新"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></button>
@@ -406,12 +319,7 @@
   </header>
 
   <div class="container">
-    <div class="tabs">
-      <button id="tabSearch" class="tab-btn active" onclick="switchTab('search')">🔍 ランキング検索</button>
-      <button id="tabChat" class="tab-btn" onclick="switchTab('chat')">💬 AIチャット</button>
-    </div>
-
-    <!-- タブ1: 0秒リアルタイム検索 -->
+    <!-- 0秒リアルタイム検索 -->
     <div id="viewSearch">
       <div class="search-box">
         <div class="search-input-wrap">
@@ -429,26 +337,6 @@
         </div>
       </div>
       <div id="resultsList"></div>
-    </div>
-
-    <!-- タブ2: 高速AIチャット -->
-    <div id="viewChat" style="display:none;">
-      <div class="chat-box">
-        <div class="filter-chips" style="margin-top:0;">
-          <button class="chip" onclick="sendQuickChat('最新')">📢 最新ランキング</button>
-          <button class="chip" onclick="sendQuickChat('無印良品で1位になった商品を全部教えて')">🥇 無印良品の1位まとめ</button>
-          <button class="chip" onclick="sendQuickChat('カルディでランクインした商品は？')">☕ カルディの商品一覧</button>
-          <button class="chip" onclick="sendQuickChat('300円以下で買える1位の商品を教えて')">💰 300円以下の1位</button>
-        </div>
-        <div id="chatMessages" class="chat-messages">
-          <div class="msg bot">こんにちは！サタプラ「ひたすら試してランキング」の高速アシスタントです。
-キーワードなら約0.5秒、AI質問でも1〜3秒で即答します。気になる商品名やテーマを入力してください！</div>
-        </div>
-        <div class="chat-input-row">
-          <input id="chatInput" type="text" class="search-input" placeholder="質問を入力（例: コスパが良いパスタソースは？）" onkeydown="if(event.key==='Enter') sendChat()">
-          <button id="chatSendBtn" class="chat-send-btn" onclick="sendChat()">送信</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -541,14 +429,6 @@
       }
     });
 
-    function switchTab(tab) {
-      var isSearch = (tab === 'search');
-      document.getElementById('tabSearch').className = 'tab-btn' + (isSearch ? ' active' : '');
-      document.getElementById('tabChat').className = 'tab-btn' + (!isSearch ? ' active' : '');
-      document.getElementById('viewSearch').style.display = isSearch ? 'block' : 'none';
-      document.getElementById('viewChat').style.display = !isSearch ? 'block' : 'none';
-    }
-
     function setFilterMode(mode, btn) {
       currentFilterMode = mode;
       var chips = btn.parentElement.querySelectorAll('.chip');
@@ -608,7 +488,7 @@
       var slice = filtered.slice(0, limit);
 
       if (slice.length === 0) {
-        container.innerHTML = '<div class="ranking-card">一致するランキングが見つかりませんでした。AIチャットタブで質問してみてください。</div>';
+        container.innerHTML = '<div class="ranking-card">一致するランキングが見つかりませんでした。別のキーワードで検索してみてください。</div>';
         return;
       }
 
@@ -654,48 +534,6 @@
       }
 
       container.innerHTML = html;
-    }
-
-    function sendQuickChat(text) {
-      document.getElementById('chatInput').value = text;
-      sendChat();
-    }
-
-    function sendChat() {
-      var input = document.getElementById('chatInput');
-      var btn = document.getElementById('chatSendBtn');
-      var text = input.value.trim();
-      if (!text || btn.disabled) return;
-
-      appendMessage(text, 'user');
-      input.value = '';
-      btn.disabled = true;
-
-      var loadingEl = appendMessage('⚡ 検索・回答中...', 'bot');
-
-      fetch(GAS_API_URL + '?q=' + encodeURIComponent(text))
-        .then(function(res) { return res.json(); })
-        .then(function(res) {
-          btn.disabled = false;
-          var sec = ((res.elapsedMs || 0) / 1000).toFixed(2);
-          var modeLabel = res.mode === 'direct' ? 'ダイレクト即答' : (res.mode === 'ai' ? 'Gemini高速AI' : '即答');
-          loadingEl.innerHTML = escapeHtml(res.answer) +
-            '<div class="msg-meta">⚡ ' + sec + '秒 (' + modeLabel + ')</div>';
-        })
-        .catch(function(err) {
-          btn.disabled = false;
-          loadingEl.textContent = 'エラーが発生しました: ' + err.message;
-        });
-    }
-
-    function appendMessage(text, role) {
-      var box = document.getElementById('chatMessages');
-      var div = document.createElement('div');
-      div.className = 'msg ' + role;
-      div.textContent = text;
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-      return div;
     }
 
     function escapeHtml(s) {
