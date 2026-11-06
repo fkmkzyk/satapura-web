@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- Google アナリティクス (GA4)：測定IDを設定すると計測が始まります。'G-XXXXXXXXXX' のままなら何も読み込みません -->
+  <script>
+    var GA_MEASUREMENT_ID = 'G-XXXXXXXXXX';
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    var GA_ENABLED = /^G-[A-Z0-9]+$/.test(GA_MEASUREMENT_ID) && GA_MEASUREMENT_ID !== 'G-XXXXXXXXXX';
+    if (GA_ENABLED) {
+      (function() {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_MEASUREMENT_ID;
+        document.head.appendChild(s);
+      })();
+      gtag('js', new Date());
+      // 更新チェック用の ?_t= などのクエリを除いたURLで記録する
+      gtag('config', GA_MEASUREMENT_ID, { page_location: location.origin + location.pathname });
+    }
+    function trackEvent(name, params) {
+      if (GA_ENABLED) gtag('event', name, params || {});
+    }
+  </script>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -341,7 +362,7 @@
   </div>
 
   <script>
-    var APP_VERSION = '2026-10-24-v5';
+    var APP_VERSION = '2026-11-06-v1';
     var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw4FFd00-qXbsI4i09UkOUJGjXaw3bFwGK2u2hyRgBRruu14AKXRWEK5yaHUwgtyzjH_Q/exec';
     var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v3';
     var allRankings = [];
@@ -437,6 +458,7 @@
       }
       btn.classList.add('active');
       renderInstantResults();
+      trackEvent('select_filter', { filter_mode: mode });
     }
 
     function quickKeyword(kw) {
@@ -456,7 +478,14 @@
       var val = document.getElementById('instantInput').value;
       document.getElementById('clearBtn').style.display = val ? 'block' : 'none';
       renderInstantResults();
+      // 入力が止まってから1.5秒後に検索キーワードを記録（1文字ごとには送らない）
+      clearTimeout(searchTrackTimer);
+      var term = val.trim();
+      if (term) {
+        searchTrackTimer = setTimeout(function() { trackEvent('search', { search_term: term }); }, 1500);
+      }
     }
+    var searchTrackTimer = null;
 
     function normalizeClient(s) {
       return String(s || '').toLowerCase().replace(/[\s\u3000]/g, '');
