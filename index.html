@@ -377,7 +377,15 @@
   </footer>
 
   <script>
-    var APP_VERSION = '2026-11-06-v2';
+    var APP_VERSION = '2026-11-06-v3';
+    // Cloudflare の検索 API（例: https://satapura-search.xxxx.workers.dev）。
+    // 空のあいだは従来どおり GAS から全件を読み込む。設定するとサーバー側検索に切り替わる。
+    var SEARCH_API_URL = '';
+    var SERVER_SEARCH = !!SEARCH_API_URL;
+    var SERVER_CACHE_KEY = 'satapura_search_latest_v1';
+    var serverTotal = 0;
+    var searchSeq = 0;
+    var searchTimer = null;
     var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw4FFd00-qXbsI4i09UkOUJGjXaw3bFwGK2u2hyRgBRruu14AKXRWEK5yaHUwgtyzjH_Q/exec';
     var LOCAL_CACHE_KEY = 'satapura_rankings_cache_v3';
     var allRankings = [];
@@ -398,7 +406,54 @@
       return rankings;
     }
 
+    // サーバー側検索：キーワードと絞り込みを送り、一致した分（最大30件）だけ受け取る
+    function runServerSearch() {
+      var q = document.getElementById('instantInput').value.trim();
+      var mode = currentFilterMode === 'satademy' ? 'satademy' : 'all';
+      var seq = ++searchSeq;
+      fetch(SEARCH_API_URL + '/api/search?q=' + encodeURIComponent(q) + '&mode=' + mode)
+        .then(function(res) {
+          if (res.status === 429) throw new Error('アクセスが集中しています。少し待ってからお試しください');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function(data) {
+          if (seq !== searchSeq) return; // 古い応答は捨てる
+          allRankings = data.results || [];
+          serverTotal = data.total || 0;
+          renderInstantResults();
+          if (!q && mode === 'all') {
+            try { localStorage.setItem(SERVER_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+          }
+        })
+        .catch(function(err) {
+          if (seq !== searchSeq) return;
+          document.getElementById('resultsList').innerHTML = '<p style="padding:12px;color:#dc2626;">' + escapeHtml(err.message) + '</p>';
+        });
+    }
+
+    function scheduleServerSearch(delay) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(runServerSearch, delay);
+    }
+
+    function fetchServerStats() {
+      fetch(SEARCH_API_URL + '/api/stats')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          document.getElementById('statsBadge').textContent = (data.count || 0) + '回分';
+        })
+        .catch(function() {
+          document.getElementById('statsBadge').textContent = '読込エラー';
+        });
+    }
+
     function fetchLatestRankings() {
+      if (SERVER_SEARCH) {
+        fetchServerStats();
+        scheduleServerSearch(0);
+        return;
+      }
       fetch(GAS_API_URL + '?api=rankings&_t=' + Date.now())
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -439,6 +494,24 @@
     }
 
     window.onload = function() {
+      if (SERVER_SEARCH) {
+        // 前回の最新30件があれば先に表示し、裏で最新を取り直す
+        try {
+          var latest = JSON.parse(localStorage.getItem(SERVER_CACHE_KEY) || 'null');
+          if (latest && latest.results) {
+            allRankings = latest.results;
+            serverTotal = latest.total || 0;
+            renderInstantResults();
+          }
+        } catch (e) {}
+        try {
+          // 以前の全件キャッシュは使わなくなったので消す
+          ['satapura_rankings_cache_v3', 'satapura_rankings_cache_v2', 'satapura_rankings_cache_v1'].forEach(function(k) { localStorage.removeItem(k); });
+        } catch (e) {}
+        checkAppUpdate();
+        fetchLatestRankings();
+        return;
+      }
       // 1. まずブラウザの localStorage キャッシュ（v3 / v2 / v1）があれば0.01秒で即座に表示
       try {
         var cached = localStorage.getItem(LOCAL_CACHE_KEY) || localStorage.getItem('satapura_rankings_cache_v2') || localStorage.getItem('satapura_rankings_cache_v1');
@@ -472,6 +545,7 @@
         chips[i].classList.remove('active');
       }
       btn.classList.add('active');
+      if (SERVER_SEARCH) scheduleServerSearch(0);
       renderInstantResults();
       trackEvent('select_filter', { filter_mode: mode });
     }
@@ -492,7 +566,11 @@
     function onInstantFilter() {
       var val = document.getElementById('instantInput').value;
       document.getElementById('clearBtn').style.display = val ? 'block' : 'none';
-      renderInstantResults();
+      if (SERVER_SEARCH) {
+        scheduleServerSearch(250);
+      } else {
+        renderInstantResults();
+      }
       // 入力が止まってから1.5秒後に検索キーワードを記録（1文字ごとには送らない）
       clearTimeout(searchTrackTimer);
       var term = val.trim();
@@ -573,8 +651,9 @@
           '</div>';
       }).join('');
 
-      if (filtered.length > limit) {
-        html += '<div style="text-align:center;color:#6b7280;font-size:13px;padding:8px;">他 ' + (filtered.length - limit) + ' 件（キーワードを入力すると全件から絞り込めます）</div>';
+      var totalCount = SERVER_SEARCH ? Math.max(serverTotal, filtered.length) : filtered.length;
+      if (totalCount > slice.length) {
+        html += '<div style="text-align:center;color:#6b7280;font-size:13px;padding:8px;">他 ' + (totalCount - slice.length) + ' 件（キーワードを足すと絞り込めます）</div>';
       }
 
       container.innerHTML = html;
