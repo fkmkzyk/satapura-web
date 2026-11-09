@@ -2,7 +2,7 @@
 
 サタプラ検索の iPhone ホーム画面用ページ（GitHub Pages）。
 本体（GAS）は非公開リポジトリ `fkmkzyk/satapura_ranking` で管理しており、ここにはその `docs/` の中身をコピーしています。
-データは GAS の Web アプリ API（`?api=rankings`）から取得します。
+検索は Cloudflare の検索 API（https://satapura-search.fkmkzyk.workers.dev）で行い、一致した分（最大30件）だけを受け取ります。
 
 公開URL: https://fkmkzyk.github.io/satapura-web/
 
