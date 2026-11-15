@@ -377,7 +377,7 @@
   </footer>
 
   <script>
-    var APP_VERSION = '2026-11-09-v1';
+    var APP_VERSION = '2026-11-15-v1';
     // Cloudflare の検索 API。キーワードを送り、一致した分（最大30件）だけ受け取る
     var SEARCH_API_URL = 'https://satapura-search.fkmkzyk.workers.dev';
     var SERVER_CACHE_KEY = 'satapura_search_latest_v1';
@@ -386,6 +386,8 @@
     var searchTimer = null;
     var allRankings = [];
     var currentFilterMode = 'all';
+    // キーワード未入力で開いたときに表示する放送回の数（直近◯週分）
+    var INITIAL_WEEKS = 3;
 
     // サーバー側検索：キーワードと絞り込みを送り、一致した分（最大30件）だけ受け取る
     function runServerSearch() {
@@ -543,8 +545,23 @@
         return hay.indexOf(kw) !== -1;
       });
 
-      var limit = kw ? 100 : 30;
-      var slice = filtered.slice(0, limit);
+      // キーワードなし（アプリを開いた直後など）は直近 INITIAL_WEEKS 週分の放送回だけを表示する
+      var isInitialView = !kw && currentFilterMode !== 'satademy';
+      var slice;
+      if (isInitialView) {
+        var seenDates = [];
+        slice = [];
+        for (var n = 0; n < filtered.length; n++) {
+          var d = filtered[n].date;
+          if (seenDates.indexOf(d) === -1) {
+            if (seenDates.length >= INITIAL_WEEKS) break;
+            seenDates.push(d);
+          }
+          slice.push(filtered[n]);
+        }
+      } else {
+        slice = filtered.slice(0, kw ? 100 : 30);
+      }
 
       if (slice.length === 0) {
         container.innerHTML = '<div class="ranking-card">一致するランキングが見つかりませんでした。別のキーワードで検索してみてください。</div>';
@@ -589,7 +606,11 @@
       }).join('');
 
       var totalCount = Math.max(serverTotal, filtered.length);
-      if (totalCount > slice.length) {
+      if (isInitialView) {
+        if (totalCount > slice.length) {
+          html += '<div style="text-align:center;color:#6b7280;font-size:13px;padding:8px;">直近' + INITIAL_WEEKS + '週分を表示しています。それより前の回はキーワードで検索できます</div>';
+        }
+      } else if (totalCount > slice.length) {
         html += '<div style="text-align:center;color:#6b7280;font-size:13px;padding:8px;">他 ' + (totalCount - slice.length) + ' 件（キーワードを足すと絞り込めます）</div>';
       }
 
